@@ -6,9 +6,14 @@ from pyglet.window import key
 import random
 import time
 import math
+import tkinter as tk
 
-width = 1000
-window = pyglet.window.Window(width=width, height=width, caption='Map', style=pyglet.window.Window.WINDOW_STYLE_BORDERLESS)
+root = tk.Tk()
+root.withdraw() 
+width = root.winfo_screenwidth()
+height = root.winfo_screenheight()
+root.destroy()
+window = pyglet.window.Window(width=width, height=height, caption='Map', style=pyglet.window.Window.WINDOW_STYLE_BORDERLESS)
 keys = []
 
 dtexts = [
@@ -24,7 +29,7 @@ drawMap = False
 SENS = 82
 
 FOV = 80
-RAYS = 70
+RAYS = 100
 RAYCAST_RES = 0.01 #The Smaller the more time it takes to render (raycast) but the less chance for rays to skip walls (0.01 is recommended)
 theta = FOV/RAYS
 print(theta)
@@ -33,12 +38,12 @@ MAP = []
 D_MAP = []
 MAP_SIZE = 10
 TILE_SIZE = int(width/MAP_SIZE)
+TSY = int(height/MAP_SIZE)
 
-P_RAD = 25
-P_SIZE = 10
+P_RAD = 10
 DEFAULT_ANGLE = 45
 p_speed = 1
-x = y = TILE_SIZE/2
+x = y = TILE_SIZE
 angle = DEFAULT_ANGLE
 
 cyc = 0
@@ -49,16 +54,16 @@ def generateMap():
         MAP.append(["" for i in range(MAP_SIZE)])
         D_MAP.append([None for i in range(MAP_SIZE)])
         for x in range(MAP_SIZE):
-            if random.randint(1,100) % 2 == 0 and y != 0 and x != 0:
+            if random.randint(1,100) % 2 == 0 and y != 1 and x != 1:
                 MAP[y][x] = "#"
-                D_MAP[y][x] = shapes.Rectangle(x*TILE_SIZE, y*TILE_SIZE, (x*TILE_SIZE)+TILE_SIZE, (y*TILE_SIZE)+TILE_SIZE, color=(0, 0, 0))
+                D_MAP[y][x] = shapes.Rectangle(x*TILE_SIZE, y*TSY, (x*TILE_SIZE)+TILE_SIZE, (y*TSY)+TSY, color=(0, 0, 0))
             else:
-                D_MAP[y][x] = shapes.Rectangle(x*TILE_SIZE, y*TILE_SIZE, (x*TILE_SIZE)+TILE_SIZE, (y*TILE_SIZE)+TILE_SIZE, color=(255,255,255))
+                D_MAP[y][x] = shapes.Rectangle(x*TILE_SIZE, y*TSY, (x*TILE_SIZE)+TILE_SIZE, (y*TSY)+TSY, color=(255,255,255))
     print(f"Map Gen Time: {time.time()-t1}")
 
 def reset():
     global x,y,angle
-    x = y = TILE_SIZE/2
+    x = y = TILE_SIZE
     angle = DEFAULT_ANGLE
     generateMap()
 
@@ -85,16 +90,16 @@ def calcPlayerMove():
 def Raycast(x,y,angle):
     global width
     dx = math.cos(math.radians(angle)) * TILE_SIZE
-    dy = math.sin(math.radians(angle)) * TILE_SIZE
+    dy = math.sin(math.radians(angle)) * TSY
     tx = x;ty = y;hit = False
     while not hit:
         tx+= dx * 0.01;ty+= dy * 0.01
         try:
-            if MAP[math.floor(ty/TILE_SIZE)][math.floor(tx/TILE_SIZE)] == "#": hit = True
+            if MAP[math.floor(ty/TSY)][math.floor(tx/TILE_SIZE)] == "#": hit = True
         except:pass
-        if math.floor(tx) not in range(0,width+1) or math.floor(ty) not in range(0,width+1):break
+        if math.floor(tx) not in range(0,width+1) or math.floor(ty) not in range(0,height+1):break
     if tx != x or ty != y:
-        return (math.floor(tx/TILE_SIZE),math.floor(ty/TILE_SIZE)),(tx,ty), math.sqrt(((tx-x)**2)+((ty-y)**2)) if math.sqrt((((tx-x)**2)+((ty-y)**2))) <= width else width
+        return (math.floor(tx/TILE_SIZE),math.floor(ty/TSY)),(tx,ty), math.sqrt(((tx-x)**2)+((ty-y)**2))
     else:
         return 0,0,0
     
@@ -129,24 +134,24 @@ def on_draw():
     window.clear()
     mx,my = calcPlayerMove()
     mpx = math.floor(x/TILE_SIZE)
-    mpy = math.floor(y/TILE_SIZE)
+    mpy = math.floor(y/TSY)
     if 0+P_RAD <= x+mx <= width-P_RAD:
         if cyc >= 10:
             try:
                 if MAP[mpy][math.floor((x+mx)/TILE_SIZE)] == "#":
                     #print("X collision")
                     if mpx > math.floor((x+mx)/TILE_SIZE):x = (((math.floor((x+mx)/TILE_SIZE))*TILE_SIZE)+TILE_SIZE)+(P_RAD/6)
-                    else:x = ((math.floor((x+mx)/TILE_SIZE))*TILE_SIZE)-P_RAD/6
+                    else:x = ((math.floor((x+mx)/TILE_SIZE))*TILE_SIZE)-(P_RAD/6)
                 else:x+=mx
             except:x+=mx
         elif mx > 0: cyc+=1
-    if 0+P_RAD <= y+my <= width-P_RAD:
+    if 0+P_RAD <= y+my <= height-P_RAD:
         if cyc >= 3:
             try:
-                if MAP[math.floor((y+my)/TILE_SIZE)][mpx] == "#":
+                if MAP[math.floor((y+my)/TSY)][mpx] == "#":
                     #print("Y collision")
-                    if mpy > math.floor((y+my)/TILE_SIZE):y = (((math.floor((y+my)/TILE_SIZE))*TILE_SIZE)+TILE_SIZE)+(P_RAD/6)
-                    else:y = ((math.floor((y+my)/TILE_SIZE))*TILE_SIZE)-P_RAD/6
+                    if mpy > math.floor((y+my)/TSY):y = (((math.floor((y+my)/TSY))*TSY)+TSY)+(P_RAD/6)
+                    else:y = ((math.floor((y+my)/TSY))*TSY)-(P_RAD/6)
                 else: y+=my
             except:y+=my
         elif mx > 0: cyc+=1
@@ -154,8 +159,8 @@ def on_draw():
         for ly in range(MAP_SIZE):
             for lx in range(MAP_SIZE):
                 D_MAP[ly][lx].draw()
-        shapes.Circle(x,y,P_SIZE/2,color=(0,255,0)).draw()
-        shapes.Line(x,y, x+(P_SIZE/1.5*math.cos(math.radians(angle))), y+(P_SIZE/1.5*math.sin(math.radians(angle))), thickness=1,color=(255,0,0)).draw()
+        shapes.Circle(x,y,P_RAD/2,color=(0,255,0)).draw()
+        shapes.Line(x,y, x+(P_RAD/1.5*math.cos(math.radians(angle))), y+(P_RAD/1.5*math.sin(math.radians(angle))), thickness=1,color=(255,0,0)).draw()
     else:
         pass
     t = -((RAYS/2)*theta) + angle
@@ -168,9 +173,9 @@ def on_draw():
             if drawMap:
                 shapes.Line(x,y, dmc[0], dmc[1], thickness=1,color=(0,0,255)).draw()
             else:
-                lh = ((1/len)*width)
-                ls = width/lh
-                alh = (width/ls) * 12
+                lh = ((1/len)*height)
+                ls = height/lh
+                alh = (height/ls) * 12
                 wcolor = math.floor(255 * ((len/ls)/(0.3*ls)))
                 if hmc != "Border":
                     shapes.Rectangle(width-(width/RAYS)*(i+1),ls,width/RAYS,alh,color=(0,0,wcolor)).draw()
@@ -182,7 +187,7 @@ def on_draw():
     if draw_times.__len__() > 120:draw_times.pop(0)
     dts = 0
     for i in draw_times:dts+=i
-    pyglet.text.Label(str(int(1/(dts/draw_times.__len__()))) + " FPS",0,width-20,color=(0,255,0)).draw()
+    pyglet.text.Label(str(int(1/(dts/draw_times.__len__()))) + " FPS",0,height-20,color=(0,255,0)).draw()
 
 generateMap()
 pyglet.app.run()
