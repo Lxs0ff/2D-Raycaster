@@ -7,9 +7,17 @@ import random
 import time
 import math
 
-width = 800
-window = pyglet.window.Window(width=width, height=width, caption='Map')
+width = 1000
+window = pyglet.window.Window(width=width, height=width, caption='Map', style=pyglet.window.Window.WINDOW_STYLE_BORDERLESS)
 keys = []
+
+dtexts = [
+    pyglet.text.Label("Press ESC to exit", 0 , 0,color=(255,0,0)),
+    pyglet.text.Label("Press SHIFT to sprint", 0 , 20,color=(255,0,0)),
+    pyglet.text.Label("Press Q to toggle window focus", 0 , 40,color=(255,0,0)),
+    pyglet.text.Label("Press R to regenerate the map", 0 , 60,color=(255,0,0)),
+    pyglet.text.Label("Press M to see the map", 0 , 80,color=(255,0,0)),
+]
 
 m_mode = False
 drawMap = False
@@ -26,24 +34,33 @@ D_MAP = []
 MAP_SIZE = 10
 TILE_SIZE = int(width/MAP_SIZE)
 
-P_RAD = 10
+P_RAD = 25
 P_SIZE = 10
+DEFAULT_ANGLE = 45
 p_speed = 1
-x = y = TILE_SIZE/2 + P_RAD
-angle = 90
+x = y = TILE_SIZE/2
+angle = DEFAULT_ANGLE
 
 cyc = 0
-t1 = time.time()
-for y in range(MAP_SIZE):
-    MAP.append(["" for i in range(MAP_SIZE)])
-    D_MAP.append([None for i in range(MAP_SIZE)])
-    for x in range(MAP_SIZE):
-        if random.randint(1,100) % 2 == 0 and y != 0 and x != 0:
-            MAP[y][x] = "#"
-            D_MAP[y][x] = shapes.Rectangle(x*TILE_SIZE, y*TILE_SIZE, (x*TILE_SIZE)+TILE_SIZE, (y*TILE_SIZE)+TILE_SIZE, color=(0, 0, 0))
-        else:
-            D_MAP[y][x] = shapes.Rectangle(x*TILE_SIZE, y*TILE_SIZE, (x*TILE_SIZE)+TILE_SIZE, (y*TILE_SIZE)+TILE_SIZE, color=(255,255,255))
-print(f"Map Gen Time: {time.time()-t1}")
+draw_times = []
+def generateMap():
+    t1 = time.time()
+    for y in range(MAP_SIZE):
+        MAP.append(["" for i in range(MAP_SIZE)])
+        D_MAP.append([None for i in range(MAP_SIZE)])
+        for x in range(MAP_SIZE):
+            if random.randint(1,100) % 2 == 0 and y != 0 and x != 0:
+                MAP[y][x] = "#"
+                D_MAP[y][x] = shapes.Rectangle(x*TILE_SIZE, y*TILE_SIZE, (x*TILE_SIZE)+TILE_SIZE, (y*TILE_SIZE)+TILE_SIZE, color=(0, 0, 0))
+            else:
+                D_MAP[y][x] = shapes.Rectangle(x*TILE_SIZE, y*TILE_SIZE, (x*TILE_SIZE)+TILE_SIZE, (y*TILE_SIZE)+TILE_SIZE, color=(255,255,255))
+    print(f"Map Gen Time: {time.time()-t1}")
+
+def reset():
+    global x,y,angle
+    x = y = TILE_SIZE/2
+    angle = DEFAULT_ANGLE
+    generateMap()
 
 def calcPlayerMove():
     mx = 0
@@ -88,6 +105,7 @@ def on_key_press(symbol, modifiers):
     if symbol == key.M and m_mode:
         drawMap = True if drawMap == False else False
     if symbol == key.LSHIFT:p_speed = 2
+    if symbol == key.R:reset()
     if symbol == key.Q:
         m_mode = True if m_mode == False else False
         if m_mode == False:keys.clear();p_speed = 1
@@ -106,8 +124,8 @@ def on_mouse_motion(x, y, dx, dy):
 
 @window.event
 def on_draw():
-    global x,y,cyc
-    #t1 = time.time()
+    global x,y,cyc,draw_times,dtexts
+    t1 = time.time()
     window.clear()
     mx,my = calcPlayerMove()
     mpx = math.floor(x/TILE_SIZE)
@@ -116,7 +134,7 @@ def on_draw():
         if cyc >= 10:
             try:
                 if MAP[mpy][math.floor((x+mx)/TILE_SIZE)] == "#":
-                    print("X collision")
+                    #print("X collision")
                     if mpx > math.floor((x+mx)/TILE_SIZE):x = (((math.floor((x+mx)/TILE_SIZE))*TILE_SIZE)+TILE_SIZE)+(P_RAD/6)
                     else:x = ((math.floor((x+mx)/TILE_SIZE))*TILE_SIZE)-P_RAD/6
                 else:x+=mx
@@ -126,11 +144,11 @@ def on_draw():
         if cyc >= 3:
             try:
                 if MAP[math.floor((y+my)/TILE_SIZE)][mpx] == "#":
-                    print("Y collision")
+                    #print("Y collision")
                     if mpy > math.floor((y+my)/TILE_SIZE):y = (((math.floor((y+my)/TILE_SIZE))*TILE_SIZE)+TILE_SIZE)+(P_RAD/6)
                     else:y = ((math.floor((y+my)/TILE_SIZE))*TILE_SIZE)-P_RAD/6
                 else: y+=my
-            except:y+=myq
+            except:y+=my
         elif mx > 0: cyc+=1
     if drawMap:
         for ly in range(MAP_SIZE):
@@ -159,8 +177,12 @@ def on_draw():
                 else:
                     shapes.Rectangle(width-(width/RAYS)*(i+1),ls,width/RAYS,alh,color=(wcolor,wcolor,wcolor)).draw()
             t+=theta
-    #print(f"Draw Time: {time.time()-t1}")
+    for e in dtexts:e.draw()
+    draw_times.append(time.time()-t1)
+    if draw_times.__len__() > 120:draw_times.pop(0)
+    dts = 0
+    for i in draw_times:dts+=i
+    pyglet.text.Label(str(int(1/(dts/draw_times.__len__()))) + " FPS",0,width-20,color=(0,255,0)).draw()
 
+generateMap()
 pyglet.app.run()
-
-
