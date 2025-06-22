@@ -8,11 +8,17 @@ import time
 import math
 import tkinter as tk
 
-root = tk.Tk()
-root.withdraw() 
-width = root.winfo_screenwidth()
-height = root.winfo_screenheight()
-root.destroy()
+FULLSCREEN = False
+
+if FULLSCREEN:
+    root = tk.Tk()
+    root.withdraw() 
+    width = root.winfo_screenwidth()
+    height = root.winfo_screenheight()
+    root.destroy()
+else:
+    width = 1000
+    height = 1000
 window = pyglet.window.Window(width=width, height=height, caption='Map', style=pyglet.window.Window.WINDOW_STYLE_BORDERLESS)
 keys = []
 
@@ -48,6 +54,66 @@ angle = DEFAULT_ANGLE
 
 cyc = 0
 draw_times = []
+
+def generateMaze(size):
+    maze = [];pos = [0,0];bctrk = False;s=False
+    for i in range(size):
+        maze.append([])
+        for e in range(size):
+            maze[i].append(0)
+    print(maze)
+    while True:
+        zcount=0
+        for i in range(size):zcount+=maze[i].count(0)
+        if zcount == 0:break
+        direct = []
+        if not bctrk:
+            try:
+                if pos[0]+1 in range(size) and maze[pos[1]][pos[0]+1] == 0:direct.append("x+") #1
+            except Exception as e:print(str(e) + str(pos))
+            try:
+                if pos[0]-1 in range(size) and maze[pos[1]][pos[0]-1] == 0:direct.append("x-") #2
+            except Exception as e:print(str(e) + str(pos))
+            try:
+                if pos[1]+1 in range(size) and maze[pos[1]+1][pos[0]] == 0:direct.append("y+") #3
+            except Exception as e:print(str(e) + str(pos))
+            try:
+                if pos[1]-1 in range(size) and maze[pos[1]-1][pos[0]] == 0:direct.append("y-") #4
+            except Exception as e:print(str(e) + str(pos))
+            print(direct)
+            if len(direct) > 0:
+                direct = random.choice(direct)
+                print(direct)
+                print(pos)
+                if direct == "x+":maze[pos[1]][pos[0]] = 1;pos[0]+=1
+                elif direct == "x-":maze[pos[1]][pos[0]] = 2;pos[0]-=1
+                elif direct == "y+":maze[pos[1]][pos[0]] = 3;pos[1]+=1
+                elif direct == "y-":maze[pos[1]][pos[0]] = 4;pos[1]-=1
+            else: bctrk = True;print("Backtracking")
+        else:
+            print("Current: "+str(pos))
+            if maze[pos[1]][pos[0]] == 1:pos[0]-=1
+            elif maze[pos[1]][pos[0]] == 2:pos[0]+=1
+            elif maze[pos[1]][pos[0]] == 3:pos[1]-=1
+            elif maze[pos[1]][pos[0]] == 4:pos[1]+=1
+            print("Next: "+str(pos))
+            if maze[pos[1]][pos[0]+1] == 0 and pos[0]+1 in range(size):bctrk=False;print("Found Dir")
+            elif maze[pos[1]][pos[0]-1] == 0 and pos[0]-1 in range(size):bctrk=False;print("Found Dir")
+            elif maze[pos[1]+1][pos[0]] == 0 and pos[1]+1 in range(size):bctrk=False;print("Found Dir")
+            elif maze[pos[1]-1][pos[0]] == 0 and pos[1]-1 in range(size):bctrk=False;print("Found Dir")
+            if not bctrk:print("Backtrack Stop")
+    print(maze)
+    for y in range(size):
+        tmp = []
+        for e in maze[y]:
+            if e == 1:tmp.append(">")
+            elif e == 2:tmp.append("<")
+            elif e == 3:tmp.append("D")
+            elif e == 4:tmp.append("U")
+        print("".join(tmp))
+    print("Done")
+    return maze
+
 def generateMap():
     t1 = time.time()
     for y in range(MAP_SIZE):
@@ -189,5 +255,8 @@ def on_draw():
     for i in draw_times:dts+=i
     pyglet.text.Label(str(int(1/(dts/draw_times.__len__()))) + " FPS",0,height-20,color=(0,255,0)).draw()
 
-generateMap()
-pyglet.app.run()
+#generateMap()
+
+#pyglet.app.run()
+
+generateMaze(10)
